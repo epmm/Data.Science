@@ -1,0 +1,125 @@
+---
+title: "HPMT 5214 - Assignment 2"
+author: "Evan Munro"
+date: "2/8/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+---
+
+```{r echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+# Prompt
+
+The historical data of daily days of service at cardiology department from May 2010
+through May 2013 is given. Import the data into RStudio and use package fpp2 to do the
+following.
+
+```{r}
+library(fpp2)
+cardio = readxl::read_excel('../Data/HW2cardioData.xlsx') 
+cardio = cardio[order(cardio$Date),] # order with oldest observation in row 1
+```
+
+***
+
+### **1)** Create a `ts` object from the data (Note: ts object should be based on daily basis).
+```{r fig.align = 'center'}
+# extract date from datetime 
+row1DOY = as.Date(cardio$Date[1], "%Y-%m-%d")
+# turn date into day of year 
+row1DOY = as.numeric(strftime(row1DOY, format = "%j"))
+cardioTS = ts(cardio[,1], start = c(2010, row1DOY), frequency = 365)
+```
+
+```{r include=FALSE, eval=FALSE}
+# plotting practice just for fun --- not part of assignment
+autoplot(cardioTS) + 
+  ggtitle("Patients Seen by Cardiology Department") +
+  expand_limits(x = c(2010, 2014)) + 
+  xlab("Year") +
+  ylab("Days of Service (# of patients seen per day)") +
+  geom_text(aes(x = 2010 + 121/365, y = 11, label = as.Date(cardio$Date[1], "%Y-%m-%d")), 
+            hjust = "right", vjust = "bottom", fontface = "italic", size = 3.5) +
+  geom_text(aes(x = 2013 + 151/365, y = 23, label = as.Date(cardio$Date[1127], "%Y-%m-%d")),
+            hjust = "left", vjust = "bottom", fontface = "italic", size = 3.5)
+```
+
+
+***
+
+### **2)** Split the data into training and testing. Put the data from May 1, 2010 to Dec 31, 2012 into training set and the rest of the data into testing set.
+
+```{r}
+startDOY = as.numeric(strftime("2010-05-01", format = "%j"))
+endDOY = as.numeric(strftime("2012-12-31", format = "%j"))
+trainSet = window(cardioTS, start = c(2010, startDOY), end = c(2012, endDOY), 
+                     frequency = 365)
+testSet = window(cardioTS, start = c(2013, 1), frequency = 365)
+```
+
+
+***
+
+### **3)** Use average, naïve and seasonal naïve methods to forecast the testing set.
+
+```{r}
+nrow(testSet)
+avgForc = meanf(trainSet, h = 152)
+naiveForc = naive(trainSet, h = 152)
+snaiveForc = snaive(trainSet, h = 152)
+```
+
+
+***
+
+### **4)** Develop the autoplot for the previous step.
+
+```{r fig.align="center"}
+autoplot(cardioTS) + 
+  autolayer(avgForc, series = "Mean Method", PI = FALSE) +
+  autolayer(naiveForc, series = "Naive Method", PI = FALSE) +
+  autolayer(snaiveForc, series = "Seasonal Naive Method", PI = FALSE) +
+  ggtitle("Forecasts of daily patients seen by Cardiology Department") +
+  xlab("Year") +
+  ylab("Number of patients seen per day") + 
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+***
+
+### **5)** What are the accuracy measures of the forecasting methods used in Part (3) and which method give the most accurate forecasts?  
+
+```{r}
+accuracy(avgForc, testSet)
+accuracy(naiveForc, testSet)
+accuracy(snaiveForc, testSet)
+```
+The seasonal naive method provided the most accurate forecast, which is evidenced by the test set MAPE, MASE, MAE, and RMSE being lowest for the seasonal naive forecast. 
+
+***
+
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

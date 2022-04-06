@@ -1,0 +1,152 @@
+---
+title: "HPMT 5214 - Assignment 4"
+author: "Evan Munro"
+date: "3/08/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+---
+
+```{r echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+# **Prompt**  
+
+Answer to the Question 11 of Chapter 4 on Page 171 in the textbook “Introduction to Statistical
+Learning” [Note: answer to all parts except part (g)]. This question asks you to use the dataset
+“Auto” which is part of “ISLR” library. As instructed in the class, in order to load the data within
+a library, you should first load the library.
+
+## **11.**
+
+#### In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set.
+
+```{r}
+library(ISLR)
+library(dplyr)
+library(e1071)
+library(MASS)
+data(Auto)
+```
+
+***
+
+### **a)** 
+#### Create a binary variable, `mpg01`, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the `median()` function. Note you may find it helpful to use the `data.frame()` function to create a single data set containing both `mpg01` and the other Auto variables.
+
+```{r fig.align='center'}
+auto = data.frame(Auto)
+str(auto)
+# origin should be a categorical variable
+auto$origin = as.factor(auto$origin)
+med = median(auto$mpg)
+mpg01 = rep(0, nrow(auto))
+mpg01[auto$mpg > med] = 1
+auto = data.frame(auto, mpg01)
+```
+
+
+***
+
+### **b)** 
+#### Explore the data graphically in order to investigate the association between `mpg01` and the other features. Which of the other features seem most likely to be useful in predicting `mpg01`? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.
+
+```{r fig.align='center'}
+str(auto)
+cor(auto[,-which(names(auto) %in% c("name", "origin"))])
+```
+Cylinders, displacement, horsepower, and weight have absolute correlations > 0.5. Mpg is ignored because it was used to make the new variable mpg01.
+
+```{r fig.align='center'}
+attach(auto)
+boxplot(cylinders ~ mpg01, data = auto, main = "mpg01 vs cylinders")
+boxplot(displacement ~ mpg01, data = auto, main = "mpg01 vs displacement")
+boxplot(horsepower ~ mpg01, data = auto, main = "mpg01 vs horsepower")
+boxplot(weight ~ mpg01, data = auto, main = "mpg01 vs weight")
+```
+It seems that cylinders, displacement, horsepower, and weight are the variables most likely to be useful in predicting `mpg01`.
+
+***
+
+### **c)** 
+#### Split the data into a training set and a test set.
+
+```{r}
+set.seed(118)
+trainIndices = sample(nrow(auto), nrow(auto)*0.8)
+mpg01_train = auto[trainIndices,]
+mpg01_test = auto[-trainIndices,]
+mpg01_pred = mpg01[-trainIndices]
+```
+
+
+***
+
+
+### **d)** 
+#### Perform LDA on the training data in order to predict `mpg01` using the variables that seemed most associated with `mpg01` in (b). What is the test error of the model obtained?
+
+```{r}
+mpg_lda = lda(mpg01 ~ cylinders + displacement + horsepower + weight, data = mpg01_train)
+lda_pred = predict(mpg_lda, mpg01_test)
+lda_class = lda_pred$class
+table(lda_class, mpg01_pred)
+mean(lda_class != mpg01_pred)
+```
+The test error rate for the LDA model is 12.66%.
+
+***
+
+### **e)** 
+#### Perform QDA on the training data in order to predict `mpg01` using the variables that seemed most associated with `mpg01` in (b). What is the test error of the model obtained?
+
+```{r}
+mpg_qda = qda(mpg01 ~ cylinders + displacement + horsepower + weight, data = mpg01_train)
+qda_pred = predict(mpg_qda, mpg01_test)
+qda_class = qda_pred$class
+table(qda_class, mpg01_pred)
+mean(qda_class != mpg01_pred)
+```
+The test error rate for the QDA model is 13.92%.
+
+***
+
+### **f)** 
+#### Perform logistic regression on the training data in order to predict `mpg01` using the variables that seemed most associated with `mpg01` in (b). What is the test error of the model obtained?
+
+```{r}
+mpg_glm = glm(mpg01 ~ cylinders + displacement + horsepower + weight, data = mpg01_train, family = binomial)
+summary(mpg_glm)
+glm_probs = predict(mpg_glm, mpg01_test, type = "response")
+glm_pred=rep(0, nrow(mpg01_test))
+glm_pred[glm_probs > 0.5] = 1
+table(glm_pred, mpg01_pred)
+mean(glm_pred != mpg01_pred)
+```
+The test error rate for the logistic regression model is 12.66%, which is the same error rate that the LDA model had, but all of the models had very similar results. 
+
+
+***
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

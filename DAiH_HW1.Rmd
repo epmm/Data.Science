@@ -1,0 +1,162 @@
+---
+title: "HPMT 5214 - Assignment 1"
+author: "Evan Munro"
+date: "2/1/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+---
+
+```{r, include=FALSE} 
+wrdClr = function(x,color){ # allows for individual word coloring and html/pdf flexibility
+  outputFormat = knitr::opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+```
+
+# Prompt
+
+"Answer to the Question 10 of Chapter 3 on Page 123 in the textbook 'Introduction to Statistical Learning'. This question asks you to use the dataset 'Carseats' which is part of 'ISLR' library. As instructed in the class, in order to load the data within a library, you should first load the library."   
+
+***
+
+## **10.** This question should be answered using the Carseats data set.
+
+Loading library and data for use, then taking a look at the data.
+```{r}
+library(ISLR)
+data("Carseats")
+attach(Carseats)
+str(Carseats) #see what the data looks like
+```
+***
+
+### **a)** Fit a multiple regression model to predict `r wrdClr('Sales', 'red')` using `r wrdClr('Price', 'blue')`, `r wrdClr('Urban', 'blue')`, and `r wrdClr('US', 'blue')`.
+
+```{r}
+csReg1 = lm(Sales ~ Price + Urban + US, data = Carseats)
+summary(csReg1)
+```
+***
+
+### **b)** Provide an interpretation of each coefficient in the model. Be careful—some of the variables in the model are qualitative!  
+
+* **`r wrdClr('Price', 'blue')`** : The coefficient value -0.054459 indicates that for every $1 increase in car seat price there may be an average estimated effect of 54.459 fewer unit sales at stores with all other variables being fixed.^[The description of `r wrdClr('Price', 'blue')` when viewed with `?Carseats` did not specify units, so American dollars were assumed.]  
+* **`r wrdClr('Urban', 'blue')`** : The coefficient value -0.021916 indicates that when stores are located in urban areas there may be an average estimated effect of 21.916 fewer unit sales than stores located in rural areas with all other variables being fixed.  
+* **`r wrdClr('US', 'blue')`** : The coefficient value 1.200573 indicates that when stores are located in the United States there may be an average estimated effect of 1200.573 more unit sales than stores located outside of the United States with all other variables being fixed.  
+
+***
+### **c)** Write out the model in equation form, being careful to handle the qualitative variables properly.  
+
+Based on the equation form <span class="math inline">\(\hat{Y} = \hat\beta_0 + \hat\beta_1X_1 + \hat\beta_2X_2 + \hat\beta_3X_3 + \epsilon\)</span>, then the model equation is 
+<p><span class="math display">\[
+Sales = 13.043469 - 0.054459(X_{Price}) - 0.021916(X_{Urban}) + 1.200573(X_{US}) + \epsilon\]
+</span></p>
+where <span class="math inline">\(X_{Urban} = 1\)</span> if the store is in an urban location, <span class="math inline">\(X_{Urban} = 0\)</span> if the store is in a rural location, <span class="math inline">\(X_{US} = 1\)</span> if the store is located in the US, and <span class="math inline">\(X_{US} = 0\)</span> if the store is located outside the US.
+
+***
+### **d)** For which of the predictors can you reject the null hypothesis <span class="math inline">\(H_0 :\beta_j = 0\)</span>?  
+
+```{r}
+summary(csReg1)$coefficients
+```
+
+The null hypothesis can be rejected for `r wrdClr('Price', 'blue')` and `r wrdClr('US', 'blue')` becuase their p-values, located in the column labeled `Pr(>|t|)`, are both less than 0.01.
+
+***
+### **e)** On the basis of your response to the previous question, fit a smaller model that only uses the predictors for which there is evidence of association with the outcome.   
+
+Fitting a new model with only `r wrdClr('Price', 'blue')` and `r wrdClr('US', 'blue')` as predictors for `r wrdClr('Sales', 'red')`.
+
+```{r}
+csReg2 = lm(Sales ~ Price + US, data = Carseats)
+summary(csReg2)
+```
+***
+### **f)** How well do the models in (a) and (e) fit the data?  
+
+Viewing the adjusted <span class="math inline">\(R^2\)</span> of both models will provide insight into how well they fit the data.
+```{r}
+(partA = summary(csReg1)$adj.r.squared)
+(partE = summary(csReg2)$adj.r.squared)
+```
+
+The model in part (e) fits the data scarcely better than the model in part (a) by explaining roughly 23.54% of the variation in unit sales among stores versus the model from part (a) explaining roughly 23.35% of the variation. 
+
+***
+### **g)** Using the model from (e), obtain 95% confidence intervals for the coefficient(s).
+
+```{r}
+confint(csReg2, conf.level = 0.95)
+```
+
+***
+### **h)** Is there evidence of outliers or high leverage observations in the model from part (e)?
+
+Checking for outliers requires seeing if the model produces studentized residual values that are greater than 3 or less than -3.
+Checking for high leverage observations requires comparing observation leverage values to the average leverage value, which is uqual to <span class="math inline">\((p + 1)/n\)</span>.
+```{r fig.align = 'center', out.width="125%", warning=FALSE}
+#Displaying residual plots to get a visualization of potential outliers 
+#and potential high leverage observations
+library(ggplot2)
+library(ggfortify)
+plots = autoplot(csReg2, colour = rgb(0.8,0.1,0.3,0.6),
+         smooth.colour = 'blue', smooth.linetype = 'dashed',
+         ad.color = rgb(0.8,0.1,0.3,0.6),
+         label.size = 3, label.n = 5, label.colour = 'black')
+plots
+```
+
+```{r}
+studR = sort(rstudent(csReg2))
+studR[studR > 3 | studR < (-3)] #check studentized residuals
+```
+All studentized residual values are less than 3 and greater than -3, so there is not evidence of meaningful outliers.
+
+```{r}
+avgLev = (2 + 1)/nrow(Carseats)
+avgLev
+obsLev = hatvalues(csReg2)
+mean(obsLev)
+#fun fact: the sum of leverage values equals the number of parameters
+sum(obsLev) 
+csReg2$rank
+#how many observations have leverage values that are more than 3 times larger 
+#than the mean leaverage value
+length(obsLev[obsLev > avgLev*3])  
+
+#check Cook's distances to see if any points are highly influential (CD > 1)
+CD = sort(cooks.distance(csReg2)) 
+CD[CD > 1]
+```
+There are 6 observations with leverage values that are more than 3 times larger than the average leverage,^[A universal rule could not be found for judging when leverage values are high realtive to the mean leverage, so the judgment criteria found at https://online.stat.psu.edu/stat501/lesson/11/11.2 was used.] so that may be considered evidence that there are high leverage observations relative to the rest of the observations. However, looking at the Cook's distance of each observation shows that none of the observations were highly influential since the Cook's distance values were all less than 1.   
+
+***
+
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

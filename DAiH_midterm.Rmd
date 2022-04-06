@@ -1,0 +1,252 @@
+---
+title: "HPMT 5214 - Midterm Exam"
+author: "Evan Munro"
+date: "3/09/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+---
+
+```{r echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+# **Prompt**  
+
+Note: Submit both your R code and word document under “Midterm” week in blackboard. Please submit your work before the finish time. Late penalty will be applied to late submissions.
+
+```{r}
+# loading all libraries that may be needed
+library(readxl)
+library(dplyr)
+library(fpp2)
+library(e1071)
+library(MASS)
+library(ggplot2)
+```
+
+## **1.**
+
+#### Import the insurance cost data (5 points) in to RStudio then answer to the following questions:
+ 
+
+```{r}
+# preparing data
+ins_data = read.csv("../Data/insurance.csv")
+str(ins_data)
+ins_data$sex = as.factor(ins_data$sex)
+ins_data$smoker = as.factor(ins_data$smoker)
+ins_data$region = as.factor(ins_data$region)
+summary(ins_data)
+```
+
+***
+
+### **a)** 
+#### How many missing values are there in the data [Use the appropriate function in R to obtain the number of missing values in the data]? 
+
+```{r}
+sum(is.na(ins_data))
+```
+There are 0 missing values in the data.
+
+***
+
+### **b)** 
+#### Create a scatter plot of “charges” versus “age”.
+
+```{r  fig.align='center'}
+ggplot(ins_data, aes(age, charges)) +
+  geom_point() + 
+  ggtitle("Charges vs Age")
+```
+
+***
+
+### **c)** 
+#### Create a scatter plot of “charges” versus “age” and modify the color of the points based on the value of “smoker” variable. How do you interpret this plot?
+
+```{r  fig.align='center'}
+ggplot(ins_data, aes(age, charges, group = smoker, color = smoker)) +
+  geom_point() + 
+  ggtitle("Charges vs Age grouped by smoker status")
+```
+Based on this plot, it appears that smokers on average have higher charges than non-smokers when age is held constant, and charges increase as age increases.
+
+***
+
+
+### **d)** 
+#### Fit a multiple regression model to predict “charges” using all of the variables in the data.
+
+```{r}
+ins_lm = lm(charges ~ ., data = ins_data)
+```
+
+
+***
+
+### **e)** 
+#### Provide an interpretation of each coefficient in the model. Be careful—some of the variables in the model are qualitative!
+
+```{r}
+ins_lm
+```
+The model suggests for every 1-year increase in age there is an estimated 259.90 dollar increase in insurance charges with all other variables held constant. The model suggests that males have an estimated 131.30 dollars less in insurance charges compared to females with all other variables held constant. The model suggests for every 1-unit increase in bmi there is an estimated 339.20 dollar increase in insurance charges with all other variables held constant. The model suggests for every child someone has there is an estimated 475.50 dollar increase in insurance charges with all other variables held constant. The model suggests that smokers have an estimated 23848.50 dollars more in insurance charges compared to non-smokers with all other variables held constant. The model suggests that people living in the northwest region have an estimated 353.00 dollars less in insurance charges with all other variables held constant. The model suggests that people living in the southeast region have an estimated 1035.0 dollars less in insurance charges with all other variables held constant. The model suggests that people living in the southwest region have an estimated 960.10 dollars less in insurance charges with all other variables held constant.
+
+***
+
+### **f)** 
+#### Write out the model in equation form, being careful to handle the qualitative variables properly. 
+
+
+$Charges = -11938.5 + 256.9(X_{Age}) - 131.30(X_{SexMale}) + 339.20(X_{BMI}) + 475.50(X_{Children}) + 23848.50(X_{SmokerYes}) - 353.00(X_{RegionNW}) - 1035.0(X_{RegionSE}) - 960.10(X_{RegionSW})+ \epsilon$
+
+
+***
+
+### **g)** 
+#### For which of the predictors can you reject the null hypothesis $H_0:\beta_j= 0$? 
+
+
+```{r}
+summary(ins_lm)
+```
+The null hypothesis can be rejected for age, bmi, children, smoker(yes), region(SE), and region(SW) because their p-values are all less than 0.05.  
+
+***
+
+### **h)** 
+#### How well does the models in (d) fit the data? 
+
+It looks like the model fits the data pretty well as indicated by the adjusted R-squared value of 0.7494, which can be interpreted by saying the model can explain roughly 75% of the variability in insurance charges.  
+
+However, the residual plots below show that there is heteroscedasticity (residuals vs fitted plot) and that the data is not normally distributed (Q-Q plot), so the model needs to improved to better fit the data.
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(ins_lm)
+```
+
+
+
+***
+
+## **2.**
+
+#### A data set named “weekly flu rates” is given to you. This data shows the weekly percent of influenza positive tests collected from public health laboratories in the US between 2015 and 2019. Import this data to RStudio (5 points) then answer to the following questions:
+
+```{r}
+# preparing data
+flu_data = read_excel("../Data/weekly flu rates.xlsx")
+```
+
+***
+
+### **a)** 
+#### After importing the data into RStudio, produce a numerical summary of each variable in the dataset.
+
+```{r}
+summary(flu_data)
+```
+
+
+***
+
+### **b)** 
+#### Create a weekly time series object [Note: include all years from 2015 to 2019].
+
+```{r}
+flu_ts = ts(flu_data$PERCENTPOSITIVE, start=c(2015, 40), frequency=52)
+```
+
+***
+
+### **c)** 
+#### Create a weekly seasonal plot for the time series that you created in section (b). When do outbreaks usually occur?
+
+```{r fig.align="center"}
+weeks = seq(2, 52, 2)
+ggseasonplot(flu_ts, year.labels=TRUE, year.labels.left=TRUE) +
+  ggtitle("Weekly Seasonal Plot of Flu % Positive") +
+  ylab("Percent Positive") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.4))
+```
+It appears that outbreaks usually occur in the winter starting around December(week 48) and stopping around May(week 18).
+
+***
+
+
+### **d)** 
+#### Split the data into training and testing. Put the weekly data starting from week 40 in 2015 to the end of 2018 in the training set and put the rest of the data in the testing set.
+
+```{r}
+trainSet = window(flu_ts, start = c(2015, 40), end = c(2018, 52), frequency = 52)
+testSet = window(flu_ts, start = c(2019, 1), frequency = 52)
+```
+
+
+***
+
+### **e)** 
+#### Use Average, Naïve and Seasonal Naïve forecasting methods to forecast the testing set.
+
+```{r}
+str(testSet)
+avgForc = meanf(trainSet, h = 16)
+naiveForc = naive(trainSet, h = 16)
+snaiveForc = snaive(trainSet, h = 16)
+```
+
+
+***
+
+### **f)** 
+#### Develop the autoplot for the previous step. 
+
+```{r fig.align="center"}
+autoplot(flu_ts) + 
+  autolayer(avgForc, series = "Mean Method", PI = FALSE) +
+  autolayer(naiveForc, series = "Naive Method", PI = FALSE) +
+  autolayer(snaiveForc, series = "Seasonal Naive Method", PI = FALSE) +
+  ggtitle("Forecasts of weekly percent positive flu tests") +
+  xlab("Year") +
+  ylab("Percent Positive") + 
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+
+***
+
+### **g)** 
+#### Calculate accuracy of the methods used in Section (e) using the testing set. Which method is the best? 
+
+```{r}
+accuracy(avgForc, testSet)
+accuracy(naiveForc, testSet)
+accuracy(snaiveForc, testSet)
+```
+The naive method is the best according to it producing the lowest test set MAPE, MASE, MAE, and RMSE.
+
+***
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

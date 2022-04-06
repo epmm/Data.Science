@@ -1,0 +1,106 @@
+---
+title: "HPMT 5214 - Assignment 3"
+author: "Evan Munro"
+date: "2/15/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+---
+
+```{r echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+# Prompt
+
+Data set `books` (available in fpp2) contains the daily sales of paperback and hardcover books at
+the same store. The task is to forecast the next four days’ sales for paperback and hardcover
+books.
+
+```{r}
+library(fpp2)
+data(books)
+str(books)
+```
+
+***
+
+### **a)** Plot the series and discuss the main features of the data.
+```{r fig.align='center'}
+autoplot(books, facets = TRUE) + 
+  ggtitle('Daily book sales at a store') +
+  xlab("Day") +
+  ylab("Books Sold") +
+  expand_limits(y = c(100, 300)) +
+  scale_x_continuous(breaks=c(1,8, 15, 22, 29, 30))
+```
+
+Both the paperback daily sales and hardcover daily sales appear to have a positive trend of increasing daily sales over time. There does not appear to be any weekly seasonality for either paperback or hardcover daily sales. 
+
+```{r fig.align='center'}
+autoplot(books) + 
+  ggtitle('Daily book sales at a store') +
+  xlab("Day") +
+  ylab("Books Sold") +
+  expand_limits(y = c(100, 300)) +
+  scale_x_continuous(breaks=c(1,7, 14, 21, 28, 30)) +
+  coord_fixed(0.07)
+```
+
+It looks like hardcover daily sales are higher on average than paperback daily sales.
+
+***
+
+### **b)** Use the `ses()` function to forecast each series, and plot the forecasts.
+
+```{r fig.align='center'}
+pprbakSES = ses(books[,1], h = 4)
+hrdcvrSES = ses(books[,2], h = 4)
+autoplot(pprbakSES) + 
+  autolayer(fitted(pprbakSES), series = "Paperback SES") + 
+  ggtitle("Forecast of daily paperback sales") +
+  xlab("Day") +
+  ylab("Books Sold")
+
+autoplot(hrdcvrSES) + 
+  autolayer(fitted(hrdcvrSES), series = "Hardcover SES") + 
+  ggtitle("Forecast of daily hardcover sales") +
+  xlab("Day") +
+  ylab("Books Sold")
+```
+
+
+***
+
+### **c)** Compute the RMSE values for the training data in each case.
+
+```{r}
+accuracy(pprbakSES)[1,'RMSE']
+accuracy(hrdcvrSES)[1,'RMSE']
+```
+
+
+***
+
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

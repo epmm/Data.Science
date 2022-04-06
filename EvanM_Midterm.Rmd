@@ -1,0 +1,274 @@
+---
+title: "HPMT 5335 - Midterm Exam"
+author: "Evan Munro"
+date: "3/22/2021"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+    toc_depth: 3
+---
+
+```{r include = F}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.align='center')
+```
+***
+
+```{r}
+# libraries
+library(dplyr)
+library(ggpubr)
+library(ggfortify) # allows autoplot() to work on lm objects
+library(NbClust)
+library(factoextra)
+library(gridExtra)
+```
+
+
+## **Question 1: Understand the response variable (charges)** 
+#### **Please refers to the data “insur_q1q2.csv”.**
+
+```{r}
+# Loading data:
+q1q2 <- read.csv("../Data/insur_q1q2.csv")
+colSums(is.na(q1q2))
+```
+***
+
+### **(1)** 
+#### **Plot a histogram to show the distribution of variable “charges”.**
+
+```{r}
+{hist(q1q2$charges, main = "Distribution of participants' total medical charges", 
+      xlab = "Charge Amount", 
+      ylab = "Frequency",
+      breaks = seq(0,70000,5000), 
+      xaxt = 'n')
+axis(side = 1, at = seq(0,70000,5000))}
+```
+
+
+***
+
+### **(2)** 
+#### **Do a density plot to show the distribution of variable “charges”.**
+
+```{r}
+{plot(density(q1q2$charges), main = "Density distribution of medical charges",
+     xaxt = 'n')
+axis(side = 1, at = seq(0,70000,5000))}
+```
+
+
+***
+### **(3)** 
+#### **Brief describe what you find in the histogram and density plot.**
+
+The plots show the distribution of charges skews to the right, and the majority of total charges for participants are less than 15000 dollars per year per participant. It also appears there is a small spike in the distribution between 35000 dollars and 50000 dollars, but overall it looks like frequency decreases as charge amount increases.  
+
+***
+
+
+## **Question 2: Understand X variables (age, sex, bmi, children, smoker and region)** 
+#### **Please refers to the data “insur_q1q2.csv”.**
+
+***
+
+### **(1)** 
+#### **Age and BMI are numerical variables. Plot two scatterplots. One plot is to show the correlation between age and charges. The other plot is to show the correlation between BMI and charges. Briefly describe what you find in these two plots.**
+
+```{r}
+ggplot(q1q2, aes(age, charges)) +
+  geom_point() + 
+  ggtitle("Charges vs Age") + 
+  stat_cor(method = "pearson", color = "black")
+```
+This plot shows that charges increase steadily as age increases. 
+
+```{r}
+ggplot(q1q2, aes(bmi, charges)) +
+  geom_point() + 
+  ggtitle("Charges vs BMI") + 
+  stat_cor(method = "pearson", color = "black")
+```
+This plot shows that most BMI scores are centered around 30 with relative charges less than 20000 dollars, but there is a subgroup that appears to show a relationship of increasing charges as BMI increases. 
+
+***
+
+### **(2)** 
+#### **Plot a box plot to show the charges between smokers and non-smokers. Briefly describe what you find in the plot. Do a pooled T test and see if the means of charges between two groups are significantly different (use two-tailed T test).**
+
+```{r}
+q1q2$smoker = as.factor(q1q2$smoker)
+
+boxplot(data=q1q2,
+		charges ~ smoker,
+		main="Charges of smokers and non-smokers",
+		xlab = "Smoker",
+		names = c("No", "Yes"))
+
+t.test(x = subset(q1q2$charges, q1q2$smoker=='yes'),
+		y = subset(q1q2$charges, q1q2$smoker=='no'),
+		alternative = "two.sided",
+		conf.level = 0.95,
+		var.equal = T)
+```
+The box plot shows that there is a substantial difference in distribution of charges between the smoker and non-smoker groups, with the smoker group showing higher charges across the distribution. The t-test shows that there is a significant difference in the mean charges of the two groups, with the smoker group having a higher mean than the non-smoker group.
+
+***
+### **(3)** 
+#### **There are four different regions in the data “insur_q1q2.csv”. Do an one-way ANOVA test to see if the means of charges of these four groups are the same.**
+
+```{r}
+q1q2$region = as.factor(q1q2$region)
+q1q2Aov = aov(charges ~ region, data=q1q2)
+summary(q1q2Aov)
+```
+The ANOVA test produced an F-value of 2.97 and a p-value of 0.031, so it can be concluded that since the F-value is greater than 1 and the p-value is less than 0.05 then there is a difference in the means of charges of the four regions.
+
+***
+
+## **Question 3: multiple linear regression** 
+#### **Please refers to the data “insur_q3.csv”.**
+
+```{r}
+# Loading data:
+q3 <- read.csv("../Data/insur_q3.csv")
+colSums(is.na(q3))
+```
+
+***
+
+### **(1)** 
+#### **Do a simple linear regression using R and Excel to see if BMI would be able to predict medical charges. Please comment on the results.**
+
+```{r}
+q3Reg = lm(charges ~ bmi, q3)
+summary(q3Reg)
+```
+
+![Excel Tables](q3.JPG)
+
+It appears that BMI can be used to predict medical charges due the very small p-value for the BMI coefficient; however, the predictive power doesn't seem to be very large since the R-squared indicates BMI can only explain roughly 4% of variation in charges.
+
+***
+
+### **(2)** 
+#### **Do a multiple linear regression using R to see if charges would be able to be predicted using all other variables in the dataset “insur_q3.csv”. What does F-test tell you and what is the value of adjusted R squared? Use T tests of coefficients to see what variables are significant on predicting charges.**
+
+```{r}
+q3Reg2 = lm(charges ~ .-bmi, q3)
+summary(q3Reg2)
+```  
+The F-test results in a large F-statistic and a very small p-value, so it can be concluded that some of the variables used in the linear model have a significant relationship with `charges`. The adjusted R-squared is 0.7231, meaning that this model may explain roughly 72% of the variation in charge amounts. Based on the t-tests of coefficients, their associated p-values being less than 0.01 indicates that `age`, `children`, and `smokeryes` are significant in relation to predicting `charges`.
+
+
+***  
+
+### **(3)**  
+#### **Check if the linear regression model meets the assumptions. Below are the five assumptions to check. Does the model meet the assumptions of linear regression?**
+* **The mean of residuals is zero.**
+* **The variances of residuals are equal for all predicted values (Homoscedasticity of residuals).**
+* **Residuals follow normal distribution.**
+* **X and residuals are uncorrelated.**
+* **No multicollinearity between x variables.**
+
+```{r}
+autoplot(q3Reg2)
+```
+```{r}
+mean(q3Reg2$residuals)
+```  
+```{r}
+cor.test(q3$charges, q3Reg2$residuals)
+```
+```{r}
+cor(q3)
+library(olsrr)
+ols_vif_tol(q3Reg2)
+```
+
+* The mean of the residuals is approximately 0.  
+* The Residuals vs Fitted plot shows that the variance of residuals is **not** equal, as displayed by the residuals being distributed in four distinct clusters.  
+* The Q-Q plot shows that the residuals are **not** normally distributed as displayed by the strong deviation of the tails.
+* The `cor.test()` shows that **there is a correlation** between the residuals and `charges`.  
+* The lack of correlation between `q3` variables and the low VIF scores show that there are not signs of multicollinearity.  
+Therefore, this model fails to meet 3/5 of the assumptions of linear regression.
+
+
+***
+
+## **Question 4: clustering analysis** 
+#### **Please refers to the data “insur_q4.csv”. Please use the first six columns as the data for clustering analysis and the last column ‘region’ as the true labels.**  
+
+```{r}
+# Loading data:
+q4 <- read.csv("../Data/insur_q4.csv")
+colSums(is.na(q4))
+q4_clust_data= select(q4, -"region")
+```
+
+***  
+
+### **(1)** 
+#### **Do hierarchical clustering with centroid linkage and Euclidean distance. Plot the dendrogram and cut the dendrogram at a height that results in four distinct clusters. How well do the clusters that you obtained in hierarchical clustering compare to the true class labels?**
+
+```{r}
+q4_sd = scale(q4_clust_data)
+data.dist = dist(q4_sd, method = "euclidean")
+cent_link = hclust(data.dist, method = "centroid")
+q4_clust = cutree(cent_link, k = 4)
+head(sort(cent_link$height, decreasing = TRUE))
+plot(cent_link, main = "Centroid Linkage")
+abline(h = 3.3, col = 'red')
+
+table(q4_clust, q4$region)
+```  
+The clusters obtained from hierarchical clustering with centroid linkage perform terribly at classifying the regions compared to the true class labels. The clusters obtained have 1335 data points in one class while the other three classes only have one data point each, which is far from the true class labels that show a more even distribution of data points across the four regions. Technically, it can be said that the hierarchical clustering correctly classified the data points of one region but at the cost of misclassifying the data points of the other three regions.
+
+
+***
+
+### **(2)** 
+#### **Do the K-means clustering of the observations with K = 4. Visualize the four clusters. How well do the clusters that you obtained in K-means clustering compare to the true class labels?**
+
+```{r}
+km = kmeans(q4_sd, 4, nstart = 20)
+km_plot = fviz_cluster(km, geom = "point", data = q4_sd) + ggtitle ("k = 4")
+km_plot
+table(km$cluster, q4$region)
+```  
+The tables above show that the kmeans clustering with K = 4 did a better job of classifying data points more evenly across the four clusters, but the table shows that kmeans with K = 4 still misclassified a large number of data points in all four regions.
+
+***
+
+### **(3)** 
+#### **How many clusters would you recommend based on elbow method using the total within sum of square?**  
+
+```{r}
+fviz_nbclust(q4_sd, kmeans, method = "wss") + labs(subtitle = "Elbow method")
+```  
+Based on the elbow method using the within sum of square, I would recommend using 2 clusters since that is where the sharpest change in slope occurs on the graph. 
+
+***
+
+</br>
+</br>
+</br>
+</br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
